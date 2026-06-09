@@ -1,19 +1,21 @@
 # MinimalPDF - Ultra-lightweight Android PDF Viewer
 
-MinimalPDF is a zero-bloat, highly performant Android application for viewing PDF files natively. Written in 100% Kotlin and Jetpack Compose, it completely avoids heavy third-party SDKs in favor of Android's native hardware-accelerated `PdfRenderer`.
+cuz i wanted an ad free psf software
+
+Ps. I designed the app and developed part of it. Most of the actual code is from gemini. 
+I havent tested it as much either, built it over a day, so if there is any issue please lemme know or send a pull request ig
+And if there are any features youd like, you can lemme know.
 
 ## Features
-- **Zero-bloat**: Does not bundle massive C++ PDF parsing libraries. Fully relies on `android.graphics.pdf.PdfRenderer`.
-- **True Dark Mode via ColorMatrix**: Instead of manually parsing or recoloring raw PDF pixels, Dark Mode safely applies a hardware-accelerated Matrix inversion filter via Compose, ensuring fluid 60FPS performance and zero memory overhead.
-- **Fluid Gestures**: A sophisticated gesture conflict resolution algorithm handles both vertical lazy scrolling and precise pinch-to-zoom offsets entirely on a shared wrapper container.
-- **Lazy Rendering**: Only renders the visual Bitmaps as the user scrolls, avoiding OutOfMemory (OOM) exceptions often found in heavy PDF documents.
+- Doesnt have bloat
+- Dark mode switch(like a color switcher thingi which just inverts all colors)
+- Normal scrolling and zooming gestures
+- Page select and page numbers(took a surprising amount of effort, like half an hour, so im including it here, broke like twice when i tried to change the pdf renderer)
+- Lazy rendering(just render the part which yoi are reading cuz i read textbooks and they be chonky)
 
-## Technical Architecture
-To avoid OutOfMemory exceptions and UI stuttering, MinimalPDF uses Jetpack Compose's `LazyColumn`. Individual PDF pages are extracted via `PdfRenderer` on a background coroutine dispatch only when they become visible. 
+## Other things
+Uses Jetpack Compose's LazyColumn and PdfRenderer
 
-The zooming engine intelligently intercepts gestures:
-- If the zoom `scale` is `1x`, `userScrollEnabled` stays `true`, yielding control to the `LazyColumn` for high-performance scrolling.
-- If the user pinches to zoom (`scale > 1x`), `LazyColumn` scrolling is paused, and the unconsumed drag events power the exact translation offsets (`offsetX`, `offsetY`) bounding within the mathematically permitted viewing rectangle.
 
 ## Build Instructions
 1. Clone the repository to your local machine.
