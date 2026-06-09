@@ -28,3 +28,8 @@ Uses Jetpack Compose's LazyColumn and PdfRenderer
 ```bash
 adb install -r -d app/build/outputs/apk/debug/app-debug.apk
 ```
+
+## APK
+or you can just install the apk on your android device directly -> MinimalPDF.apk from the main directory
+
+Have fun, and get excited
