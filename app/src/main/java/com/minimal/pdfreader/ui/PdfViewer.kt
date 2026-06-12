@@ -15,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -282,7 +284,12 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { showThumbnails = !showThumbnails }) {
-                        Text("▦")
+                        Icon(
+                            imageVector = Icons.Default.GridView,
+                            contentDescription = "Grid View",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(28.dp)
+                        )
                     }
                     IconButton(onClick = onOpenNewFile) {
                         Text("📁")
@@ -317,6 +324,7 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
                 ThumbnailGrid(
                     pdfRenderer = thumbPdfRenderer!!,
                     pageCount = pageCount,
+                    currentPageIndex = firstVisible.value,
                     isDarkMode = isDarkMode,
                     onPageSelected = { index ->
                         showThumbnails = false

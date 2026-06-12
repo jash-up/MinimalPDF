@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,12 +28,19 @@ import kotlinx.coroutines.withContext
 fun ThumbnailGrid(
     pdfRenderer: PdfRenderer,
     pageCount: Int,
+    currentPageIndex: Int,
     isDarkMode: Boolean,
     onPageSelected: (Int) -> Unit
 ) {
     val renderMutex = remember { Mutex() }
+    val gridState = rememberLazyGridState()
+
+    LaunchedEffect(Unit) {
+        gridState.scrollToItem(currentPageIndex)
+    }
     
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Fixed(3),
         modifier = Modifier
             .fillMaxSize()
