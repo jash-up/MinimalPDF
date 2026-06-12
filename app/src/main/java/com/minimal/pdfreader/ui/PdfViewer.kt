@@ -43,13 +43,17 @@ import java.io.FileOutputStream
 @Composable
 fun PdfViewer(uri: Uri) {
     val context = LocalContext.current
+    val sharedPrefs = remember { context.getSharedPreferences("MinimalPDFPrefs", android.content.Context.MODE_PRIVATE) }
+    val uriString = uri.toString()
+    val initialPage = remember(uriString) { sharedPrefs.getInt(uriString, 0) }
+    
     var pdfRenderer by remember { mutableStateOf<PdfRenderer?>(null) }
     var pageCount by remember { mutableStateOf(0) }
     var isDarkMode by remember { mutableStateOf(false) }
     var isControlsVisible by remember { mutableStateOf(true) }
     var showJumpDialog by remember { mutableStateOf(false) }
     
-    val listState = rememberLazyListState()
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialPage)
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(uri) {
@@ -107,6 +111,11 @@ fun PdfViewer(uri: Uri) {
 
     if (pdfRenderer != null && pageCount > 0) {
         val firstVisible = remember { derivedStateOf { listState.firstVisibleItemIndex } }
+        
+        LaunchedEffect(firstVisible.value) {
+            sharedPrefs.edit().putInt(uriString, firstVisible.value).apply()
+        }
+        
         var scale by remember { mutableFloatStateOf(1f) }
         var offset by remember { mutableStateOf(Offset.Zero) }
 

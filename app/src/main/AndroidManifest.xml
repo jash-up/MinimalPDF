@@ -4,6 +4,8 @@
 
     <application
         android:label="MinimalPDF"
+        android:icon="@drawable/ic_minimal_logo"
+        android:roundIcon="@drawable/ic_minimal_logo"
         android:theme="@style/Theme.MinimalPDF">
         <activity
             android:name=".MainActivity"
