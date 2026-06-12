@@ -287,7 +287,7 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
                         Icon(
                             imageVector = Icons.Default.GridView,
                             contentDescription = "Grid View",
-                            tint = MaterialTheme.colorScheme.onSurface,
+                            tint = Color.White,
                             modifier = Modifier.size(28.dp)
                         )
                     }
