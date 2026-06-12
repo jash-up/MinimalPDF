@@ -50,10 +50,13 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
     
     var fileDescriptor by remember { mutableStateOf<ParcelFileDescriptor?>(null) }
     var pdfRenderer by remember { mutableStateOf<PdfRenderer?>(null) }
+    var thumbFileDescriptor by remember { mutableStateOf<ParcelFileDescriptor?>(null) }
+    var thumbPdfRenderer by remember { mutableStateOf<PdfRenderer?>(null) }
     var pageCount by remember { mutableStateOf(0) }
     var isDarkMode by remember { mutableStateOf(false) }
     var isControlsVisible by remember { mutableStateOf(true) }
     var showJumpDialog by remember { mutableStateOf(false) }
+    var showThumbnails by remember { mutableStateOf(false) }
     
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -83,10 +86,14 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
                 // Clean up old resources on background thread
                 pdfRenderer?.close()
                 fileDescriptor?.close()
+                thumbPdfRenderer?.close()
+                thumbFileDescriptor?.close()
                 
                 withContext(Dispatchers.Main) {
                     pdfRenderer = null
                     fileDescriptor = null
+                    thumbPdfRenderer = null
+                    thumbFileDescriptor = null
                     pageCount = 0
                 }
 
@@ -107,10 +114,15 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
                 val fd = ParcelFileDescriptor.open(cachedFile, ParcelFileDescriptor.MODE_READ_ONLY)
                 
                 val renderer = PdfRenderer(fd)
+
+                val fdThumb = ParcelFileDescriptor.open(cachedFile, ParcelFileDescriptor.MODE_READ_ONLY)
+                val rendererThumb = PdfRenderer(fdThumb)
                 
                 withContext(Dispatchers.Main) {
                     fileDescriptor = fd
                     pdfRenderer = renderer
+                    thumbFileDescriptor = fdThumb
+                    thumbPdfRenderer = rendererThumb
                     pageCount = renderer.pageCount
                 }
             } catch (e: Exception) {
@@ -132,6 +144,8 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
                 try {
                     pdfRenderer?.close()
                     fileDescriptor?.close()
+                    thumbPdfRenderer?.close()
+                    thumbFileDescriptor?.close()
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -267,6 +281,9 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(onClick = { showThumbnails = !showThumbnails }) {
+                        Text("▦")
+                    }
                     IconButton(onClick = onOpenNewFile) {
                         Text("📁")
                     }
@@ -294,6 +311,20 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
                         color = Color.White
                     )
                 }
+            }
+
+            if (showThumbnails && thumbPdfRenderer != null) {
+                ThumbnailGrid(
+                    pdfRenderer = thumbPdfRenderer!!,
+                    pageCount = pageCount,
+                    isDarkMode = isDarkMode,
+                    onPageSelected = { index ->
+                        showThumbnails = false
+                        coroutineScope.launch {
+                            listState.scrollToItem(index)
+                        }
+                    }
+                )
             }
         }
     }
