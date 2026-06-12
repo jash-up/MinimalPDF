@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -202,6 +203,12 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
         
         var scale by remember { mutableFloatStateOf(1f) }
         var offset by remember { mutableStateOf(Offset.Zero) }
+        
+        val configuration = LocalConfiguration.current
+        LaunchedEffect(configuration.orientation) {
+            scale = 1f
+            offset = Offset.Zero
+        }
 
         Box(
             modifier = Modifier
