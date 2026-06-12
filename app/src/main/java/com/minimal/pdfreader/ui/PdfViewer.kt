@@ -47,30 +47,93 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
     val uriString = uri.toString()
     val initialPage = remember(uriString) { sharedPrefs.getInt(uriString, 0) }
     
+    var fileDescriptor by remember { mutableStateOf<ParcelFileDescriptor?>(null) }
     var pdfRenderer by remember { mutableStateOf<PdfRenderer?>(null) }
     var pageCount by remember { mutableStateOf(0) }
     var isDarkMode by remember { mutableStateOf(false) }
     var isControlsVisible by remember { mutableStateOf(true) }
     var showJumpDialog by remember { mutableStateOf(false) }
     
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialPage)
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(uri) {
+        isLoading = true
+        errorMessage = null
+        
+        try {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Ignore if permission taking fails (e.g. for content not via SAF)
+        }
+        
+        // Restore page state for the new URI (safe on main thread)
+        val newUriString = uri.toString()
+
         withContext(Dispatchers.IO) {
             try {
+                // Clean up old resources on background thread
+                pdfRenderer?.close()
+                fileDescriptor?.close()
+                
+                withContext(Dispatchers.Main) {
+                    pdfRenderer = null
+                    fileDescriptor = null
+                    pageCount = 0
+                }
+
                 val inputStream = context.contentResolver.openInputStream(uri)
-                val tempFile = File(context.cacheDir, "temp.pdf")
-                val outputStream = FileOutputStream(tempFile)
-                inputStream?.copyTo(outputStream)
-                inputStream?.close()
+                if (inputStream == null) {
+                    withContext(Dispatchers.Main) {
+                        errorMessage = "Could not open file."
+                    }
+                    return@withContext
+                }
+
+                val cachedFile = File(context.cacheDir, "cached_pdf_${uri.hashCode()}.pdf")
+                val outputStream = FileOutputStream(cachedFile)
+                inputStream.copyTo(outputStream)
+                inputStream.close()
                 outputStream.close()
                 
-                val fd = ParcelFileDescriptor.open(tempFile, ParcelFileDescriptor.MODE_READ_ONLY)
-                pdfRenderer = PdfRenderer(fd)
-                pageCount = pdfRenderer?.pageCount ?: 0
+                val fd = ParcelFileDescriptor.open(cachedFile, ParcelFileDescriptor.MODE_READ_ONLY)
+                
+                val renderer = PdfRenderer(fd)
+                
+                withContext(Dispatchers.Main) {
+                    fileDescriptor = fd
+                    pdfRenderer = renderer
+                    pageCount = renderer.pageCount
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    errorMessage = "Error loading PDF: ${e.localizedMessage}"
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    isLoading = false
+                }
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    pdfRenderer?.close()
+                    fileDescriptor?.close()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
     }
@@ -109,11 +172,32 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
         )
     }
 
-    if (pdfRenderer != null && pageCount > 0) {
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Color.White)
+        }
+    } else if (errorMessage != null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(errorMessage!!, color = Color.Red)
+                Spacer(Modifier.height(16.dp))
+                Button(onClick = onOpenNewFile) {
+                    Text("Try Another File")
+                }
+            }
+        }
+    } else if (pdfRenderer != null && pageCount > 0) {
         val firstVisible = remember { derivedStateOf { listState.firstVisibleItemIndex } }
         
         LaunchedEffect(firstVisible.value) {
             sharedPrefs.edit().putInt(uriString, firstVisible.value).apply()
+        }
+        
+        LaunchedEffect(uriString) {
+            val savedPage = sharedPrefs.getInt(uriString, 0)
+            if (savedPage in 0 until pageCount) {
+                listState.scrollToItem(savedPage)
+            }
         }
         
         var scale by remember { mutableFloatStateOf(1f) }
@@ -204,10 +288,6 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
                     )
                 }
             }
-        }
-    } else {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Color.White)
         }
     }
 }

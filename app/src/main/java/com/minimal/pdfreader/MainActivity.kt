@@ -16,36 +16,43 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.minimal.pdfreader.ui.PdfViewer
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity() {
+
+    private val pdfUriState = MutableStateFlow<Uri?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        if (intent?.action == Intent.ACTION_VIEW) {
+            pdfUriState.value = intent.data
+        }
+
         setContent {
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = Color.Black
                 ) {
-                    var pdfUri by remember { mutableStateOf(intent?.data) }
+                    val pdfUri by pdfUriState.collectAsState()
                     
                     val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
-                        androidx.activity.result.contract.ActivityResultContracts.GetContent()
+                        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
                     ) { uri: Uri? ->
                         if (uri != null) {
-                            pdfUri = uri
+                            pdfUriState.value = uri
                         }
                     }
 
                     if (pdfUri != null) {
                         PdfViewer(
                             uri = pdfUri!!,
-                            onOpenNewFile = { launcher.launch("application/pdf") }
+                            onOpenNewFile = { launcher.launch(arrayOf("application/pdf")) }
                         )
                     } else {
                         Box(
-                            modifier = Modifier.fillMaxSize().clickable { launcher.launch("application/pdf") }, 
+                            modifier = Modifier.fillMaxSize().clickable { launcher.launch(arrayOf("application/pdf")) }, 
                             contentAlignment = Alignment.Center
                         ) {
                             Text("No PDF selected. Tap to Open a PDF.", color = Color.White)
@@ -53,6 +60,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        if (intent?.action == Intent.ACTION_VIEW) {
+            pdfUriState.value = intent.data
         }
     }
 }

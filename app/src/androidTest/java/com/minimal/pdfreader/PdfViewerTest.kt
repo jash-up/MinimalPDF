@@ -1,0 +1,22 @@
+package com.minimal.pdfreader
+
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class PdfViewerTest {
+
+    @get:Rule
+    val composeTestRule = createAndroidComposeRule<MainActivity>()
+
+    @Test
+    fun testInitialStateShowsNoPdfText() {
+        // Initially, the app should show "No PDF selected. Tap to Open a PDF."
+        composeTestRule.onNodeWithText("No PDF selected. Tap to Open a PDF.").assertExists()
+    }
+}
