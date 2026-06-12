@@ -41,7 +41,7 @@ import java.io.FileOutputStream
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PdfViewer(uri: Uri) {
+fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
     val context = LocalContext.current
     val sharedPrefs = remember { context.getSharedPreferences("MinimalPDFPrefs", android.content.Context.MODE_PRIVATE) }
     val uriString = uri.toString()
@@ -176,6 +176,9 @@ fun PdfViewer(uri: Uri) {
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(onClick = onOpenNewFile) {
+                        Text("📁")
+                    }
                     TextButton(onClick = { isDarkMode = !isDarkMode }) {
                         Text(if (isDarkMode) "Normal Mode" else "Dark Mode", color = Color.White)
                     }
