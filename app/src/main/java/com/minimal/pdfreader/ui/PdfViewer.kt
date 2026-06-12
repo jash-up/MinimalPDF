@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +30,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -59,6 +63,8 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
     var isControlsVisible by remember { mutableStateOf(true) }
     var showJumpDialog by remember { mutableStateOf(false) }
     var showThumbnails by remember { mutableStateOf(false) }
+    var showToc by remember { mutableStateOf(false) }
+    var tocItems by remember { mutableStateOf<List<TocItem>>(emptyList()) }
     
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -112,6 +118,37 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
                 inputStream.copyTo(outputStream)
                 inputStream.close()
                 outputStream.close()
+                
+                try {
+                    PDFBoxResourceLoader.init(context)
+                    val document = PDDocument.load(cachedFile)
+                    val outline = document.documentCatalog.documentOutline
+                    val extractedToc = mutableListOf<TocItem>()
+                    
+                    if (outline != null) {
+                        fun extractToc(item: PDOutlineItem?, level: Int) {
+                            var current = item
+                            while (current != null) {
+                                val title = current.title ?: ""
+                                val page = current.findDestinationPage(document)
+                                val pageIndex = if (page != null) document.pages.indexOf(page) else -1
+                                
+                                if (pageIndex != -1) {
+                                    extractedToc.add(TocItem(title, pageIndex, level))
+                                }
+                                extractToc(current.firstChild, level + 1)
+                                current = current.nextSibling
+                            }
+                        }
+                        extractToc(outline.firstChild, 0)
+                    }
+                    document.close()
+                    withContext(Dispatchers.Main) {
+                        tocItems = extractedToc
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
                 
                 val fd = ParcelFileDescriptor.open(cachedFile, ParcelFileDescriptor.MODE_READ_ONLY)
                 
@@ -283,6 +320,14 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
                         .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(onClick = { showToc = !showToc }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.List,
+                            contentDescription = "Table of Contents",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                     IconButton(onClick = { showThumbnails = !showThumbnails }) {
                         Icon(
                             imageVector = Icons.Default.GridView,
@@ -328,6 +373,19 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
                     isDarkMode = isDarkMode,
                     onPageSelected = { index ->
                         showThumbnails = false
+                        coroutineScope.launch {
+                            listState.scrollToItem(index)
+                        }
+                    }
+                )
+            }
+
+            if (showToc) {
+                TocOverlay(
+                    toc = tocItems,
+                    isDarkMode = isDarkMode,
+                    onTocItemSelected = { index ->
+                        showToc = false
                         coroutineScope.launch {
                             listState.scrollToItem(index)
                         }
