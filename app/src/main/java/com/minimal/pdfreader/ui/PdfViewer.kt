@@ -247,10 +247,12 @@ fun PdfViewer(uri: Uri, onOpenNewFile: () -> Unit) {
             sharedPrefs.edit().putInt(uriString, firstVisible.value).apply()
         }
         
-        LaunchedEffect(uriString) {
-            val savedPage = sharedPrefs.getInt(uriString, 0)
-            if (savedPage in 0 until pageCount) {
-                listState.scrollToItem(savedPage)
+        LaunchedEffect(uriString, pageCount) {
+            if (pageCount > 0) {
+                val savedPage = sharedPrefs.getInt(uriString, 0)
+                if (savedPage in 0 until pageCount) {
+                    listState.scrollToItem(savedPage)
+                }
             }
         }
         
